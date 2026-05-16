@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: #1a1a1a;
+            border-bottom: 1px solid #2a2a2a;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .model-select {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .model-select:focus {
+            border-color: #10a37f;
+        }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #10a37f;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            border: 1px solid #2a2a2a;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.error {
+            align-self: center;
+            background: #3d1f1f;
+            color: #ff6b6b;
+            border: 1px solid #5c2020;
+            font-size: 13px;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 12px 16px;
+            background: #1e1e1e;
+            border-radius: 16px;
+            border: 1px solid #2a2a2a;
+            display: none;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #10a37f;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Input Area */
+        .input-area {
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            padding: 16px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-area textarea {
+            flex: 1;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 44px;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+
+        .input-area textarea:focus {
+            border-color: #10a37f;
+        }
+
+        .input-area textarea::placeholder {
+            color: #666;
+        }
+
+        .send-btn {
+            background: #10a37f;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover {
+            background: #0d8c6d;
+        }
+
+        .send-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+            transform: rotate(180deg);
+        }
+
+        /* Welcome */
+        .welcome {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .welcome h2 {
+            font-size: 24px;
+            color: #10a37f;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            font-size: 14px;
+        }
+
+        /* Token info */
+        .token-info {
+            font-size: 11px;
+            color: #555;
+            text-align: left;
+            margin-top: 4px;
+        }
+
+        /* Clear btn */
+        .clear-btn {
+            background: transparent;
+            border: 1px solid #3a3a3a;
+            color: #888;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .clear-btn:hover {
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .message { max-width: 92%; }
+            .header { padding: 10px 14px; }
+            .input-area { padding: 12px 14px; }
+            .header h1 { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 ChatGPT</h1>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button class="clear-btn" onclick="clearChat()">مسح</button>
+            <select class="model-select" id="modelSelect">
+                <option value="openai/gpt-4o">GPT-4o</option>
+                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="openai/gpt-4">GPT-4</option>
+                <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="openai/gpt-3.5-turbo-16k">GPT-3.5 16K</option>
+                <option value="openai/o1-preview">o1 Preview</option>
+                <option value="openai/o1-mini">o1 Mini</option>
+                <option value="openai/chatgpt-4o-latest">ChatGPT-4o Latest</option>
+                <option value="openai/gpt-4o-2024-11-20">GPT-4o Nov 2024</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="welcome">
+            <h2>مرحبا! 👋</h2>
+            <p>اكتب أي شيء للبدء بالدردشة</p>
+        </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+        <span></span><span></span><span></span>
+    </div>
+
+    <div class="input-area">
+        <textarea id="messageInput" placeholder="اكتب رسالتك هنا..." rows="1" autofocus></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // ===== الإعدادات =====
+        // يستخدم /api/chat (Vercel serverless) لحماية المفتاح
+        // أو يتصل مباشرة بـ OpenRouter إذا مفتاح موجود
+        const USE_API_ROUTE = true; // true = يستخدم /api/chat (Vercel)
+        const API_URL = USE_API_ROUTE ? "/api/chat" : "https://openrouter.ai/api/v1/chat/completions";
+        const SYSTEM_PROMPT = "أنت مساعد ذكي ومفيد. أجب بشكل واضح ومفصل. يمكنك الإجابة بالعربية أو الإنجليزية حسب لغة السؤال.";
+
+        let conversationHistory = [
+            { role: "system", content: SYSTEM_PROMPT }
+        ];
+
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const modelSelect = document.getElementById('modelSelect');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Enter to send
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function addMessage(content, role) {
+            // Remove welcome message
+            const welcome = chatContainer.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            msgDiv.textContent = content;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTyping(show) {
+            typingIndicator.className = show ? 'typing-indicator active' : 'typing-indicator';
+            if (show) {
+                chatContainer.appendChild(typingIndicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        function clearChat() {
+            conversationHistory = [{ role: "system", content: SYSTEM_PROMPT }];
+            chatContainer.innerHTML = `
+                <div class="welcome">
+                    <h2>مرحبا! 👋</h2>
+                    <p>اكتب أي شيء للبدء بالدردشة</p>
+                </div>
+            `;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            conversationHistory.push({ role: "user", content: message });
+
+            // Clear input
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Disable input
+            sendBtn.disabled = true;
+            messageInput.disabled = true;
+            showTyping(true);
+
+            try {
+                const fetchHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                // إذا ما نستخدم API route، نحط المفتاح مباشرة
+                if (!USE_API_ROUTE) {
+                    fetchHeaders['Authorization'] = `Bearer ${API_KEY}`;
+                    fetchHeaders['HTTP-Referer'] = window.location.href;
+                    fetchHeaders['X-Title'] = 'ChatGPT Agent';
+                }
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: fetchHeaders,
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: conversationHistory,
+                        temperature: 0.7,
+                        max_tokens: 4096
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData?.error?.message || `HTTP Error ${response.status}`;
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+                const assistantMessage = data.choices[0].message.content;
+
+                conversationHistory.push({ role: "assistant", content: assistantMessage });
+                showTyping(false);
+                addMessage(assistantMessage, 'assistant');
+
+            } catch (error) {
+                showTyping(false);
+                addMessage(`خطأ: ${error.message}`, 'error');
+                // Remove failed message from history
+                conversationHistory.pop();
+            } finally {
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>
